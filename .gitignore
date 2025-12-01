@@ -1,0 +1,5 @@
+# Don't upload input files
+*.txt
+
+# Don't upload .vscode folder
+.vscode/*
