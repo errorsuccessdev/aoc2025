@@ -59,6 +59,13 @@ main :: proc()
         // Do rotation
         rotationAmount, ok := strconv.parse_int(r[1:])
         assert(ok)
+        numRotations := 0
+        for rotationAmount > 100
+        {
+            rotationAmount -= 100
+            numRotations += 1
+        }
+        password += numRotations
         when ODIN_DEBUG do fmt.printfln("=== Rotation %v ===", r)
         if r[0] == 'L'
         {
