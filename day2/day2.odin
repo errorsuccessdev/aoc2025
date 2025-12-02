@@ -6,6 +6,40 @@ import os "core:os/os2"
 import "core:strings"
 import "core:strconv"
 
+checkForRepeats :: proc(input: string, parts: int) -> bool
+{
+    strLen := len(input)
+    if parts > strLen do return false
+    start: int
+    split := strLen / parts
+    end := start + split
+    when ODIN_DEBUG do fmt.printf("Processing %v: ", input)
+    chunks: [dynamic]string
+    defer delete(chunks)
+    for
+    {
+        append(&chunks, input[start:end])
+        start = end
+        end += split
+        if end > strLen do break
+    }
+    when ODIN_DEBUG
+    {
+        for chunk in chunks do fmt.printf("%v, ", chunk)
+        fmt.println()
+    }
+    ret := true
+    for i := 0; i < len(chunks) - 1; i += 1
+    {
+        if chunks[i] != chunks[i+1] do ret = false
+    }
+    when ODIN_DEBUG 
+    {
+        if ret do fmt.printfln("%v is invalid!", input)
+    }
+    return ret
+}
+
 checkIDs :: proc(start, end: u64) -> (cumulativeInvalidIDs: u64)
 {    
     ret: u64
@@ -14,28 +48,13 @@ checkIDs :: proc(start, end: u64) -> (cumulativeInvalidIDs: u64)
     {
         buffer: [1024]u8
         idStr := strconv.write_uint(buffer[:], id, 10)
-        idStrLen := len(idStr)
-        if idStrLen % 2 != 0
+        hasRepeats := false
+        for i := 2; i <= len(idStr); i += 1
         {
-            when ODIN_DEBUG 
-            {
-                fmt.printfln("ID %v has an odd length, skipping it", id)
-            }
-            continue
+            hasRepeats = checkForRepeats(idStr, i)
+            if hasRepeats do break
         }
-        splitPoint := idStrLen / 2
-        firstHalf := idStr[:splitPoint]
-        secondHalf := idStr[splitPoint:]
-        when ODIN_DEBUG
-        {
-            fmt.printfln("First half: %v, second half: %v",
-                         firstHalf, secondHalf)
-        }
-        if firstHalf == secondHalf
-        {
-            when ODIN_DEBUG do fmt.printfln("ID %v is invalid!", id)
-            ret += id
-        }
+        if hasRepeats do ret += id
     }
     return ret
 }
