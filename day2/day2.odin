@@ -1,3 +1,14 @@
+/*
+    Words cannot express my disbelief at the amount of time it took 
+    me to figure this out. Hundreds of lines of nested for loops 
+    and debug messages desperately trying to stop false positives 
+    like 222222220, 6596591, etc. 
+
+    I just needed to check if the string could be split into equal 
+    parts (len(str) % i == 0).
+
+    I am simultaneously sad, angry, and relieved.
+*/
 package day2
 
 import "core:mem"
@@ -10,12 +21,11 @@ checkForRepeats :: proc(input: string, parts: int) -> bool
 {
     strLen := len(input)
     if parts > strLen do return false
+    chunks: [dynamic]string
+    defer delete(chunks)
     start: int
     split := strLen / parts
     end := start + split
-    when ODIN_DEBUG do fmt.printf("Processing %v: ", input)
-    chunks: [dynamic]string
-    defer delete(chunks)
     for
     {
         append(&chunks, input[start:end])
@@ -23,21 +33,11 @@ checkForRepeats :: proc(input: string, parts: int) -> bool
         end += split
         if end > strLen do break
     }
-    when ODIN_DEBUG
-    {
-        for chunk in chunks do fmt.printf("%v, ", chunk)
-        fmt.println()
-    }
-    ret := true
     for i := 0; i < len(chunks) - 1; i += 1
     {
-        if chunks[i] != chunks[i+1] do ret = false
+        if chunks[i] != chunks[i+1] do return false
     }
-    when ODIN_DEBUG 
-    {
-        if ret do fmt.printfln("%v is invalid!", input)
-    }
-    return ret
+    return true
 }
 
 checkIDs :: proc(start, end: u64) -> (cumulativeInvalidIDs: u64)
@@ -48,13 +48,16 @@ checkIDs :: proc(start, end: u64) -> (cumulativeInvalidIDs: u64)
     {
         buffer: [1024]u8
         idStr := strconv.write_uint(buffer[:], id, 10)
+        idStrLen := len(idStr)
         hasRepeats := false
-        for i := 2; i <= len(idStr); i += 1
+        for i := 2; i <= idStrLen; i += 1
         {
-            hasRepeats = checkForRepeats(idStr, i)
-            if hasRepeats do break
+            if idStrLen % i == 0 && checkForRepeats(idStr, i)
+            {
+                ret += id
+                break
+            }
         }
-        if hasRepeats do ret += id
     }
     return ret
 }
