@@ -6,6 +6,40 @@ import os "core:os/os2"
 import "core:strings"
 import "core:strconv"
 
+removeSmallestNumbers :: proc(str: string, removeMe: string,
+                              removeMax: int) -> 
+                             (new: string, numRemoved: int)
+{
+    nr: int
+    s := str
+    for i in 0..<removeMax
+    {
+        sTemp, _ := strings.remove(s, removeMe, 1)
+        if len(sTemp) == len(s) do break
+        nr += 1
+        s = sTemp
+    }
+    return s, nr
+}
+
+intToString :: proc(i: int) -> string
+{
+    ensure(i >= 1 && i <= 9)
+    switch i
+    {
+        case 1: return "1"
+        case 2: return "2"
+        case 3: return "3"
+        case 4: return "4"
+        case 5: return "5"
+        case 6: return "6"
+        case 7: return "7"
+        case 8: return "8"
+        case 9: return "9"
+    }
+    return "unimplemented"
+}
+
 getHighestNumber :: proc(str: string, start: int = 9) -> 
                         (highest: int, pos: int)
 {
@@ -22,6 +56,7 @@ getHighestNumber :: proc(str: string, start: int = 9) ->
 
 main :: proc()
 {
+    /*
     when ODIN_DEBUG 
     {
 		track: mem.Tracking_Allocator
@@ -40,6 +75,7 @@ main :: proc()
 			mem.tracking_allocator_destroy(&track)
 		}
 	}
+    */
 
     when ODIN_DEBUG 
     { 
@@ -63,40 +99,57 @@ main :: proc()
     defer delete(str)
 
     // Process input
+    BATTERIES_TO_TURN_ON :: 12
     cumulativeHighest: int
     for s in str
     {
         if len(s) == 0 do continue // skip empty lines
         when ODIN_DEBUG do fmt.printfln("%v =====", s)
-        highest, tensPlace, tpPos, onesPlace, opPos: int
-        i := 10 // start at 10 since we decrement immediately
-        for
+        removeMax := len(s) - BATTERIES_TO_TURN_ON
+        when ODIN_DEBUG do fmt.printfln("Remove max is %v", removeMax)
+        numRemoved, highest, pos: int
+        highestStr, endStr: string
+        for i := 9; i > 0; i -= 1
         {
-            i -= 1 // this needs to be up here for continue trickery
-            tensPlace, tpPos := getHighestNumber(s, i)
-            assert(tensPlace != -1 && tpPos != -1)
-            if tpPos >= len(s) - 1 do continue
-            else do when ODIN_DEBUG
+            highest, pos = getHighestNumber(s, i)
+            if pos < removeMax
             {
-                fmt.printfln("Tens place: %v at pos %v", tensPlace, tpPos)
-            }
-            onesPlace, opPos = getHighestNumber(s[tpPos+1:])
-            if opPos != -1
-            {
-                when ODIN_DEBUG
-                {
-                    fmt.printfln("Ones place: %v at pos %v", onesPlace, opPos)
-                }
-                highest = (10 * tensPlace) + onesPlace
+                highestStr = intToString(highest)
                 break
             }
         }
-        when ODIN_DEBUG do fmt.printfln("Highest: %v", highest)
-        cumulativeHighest += highest
+        subStr := s[pos+1:]
+        removeMax = len(subStr) - BATTERIES_TO_TURN_ON + 1
+        for i in 1..<10
+        {
+            when ODIN_DEBUG do fmt.printfln("Remove max is %v", removeMax)
+            r := intToString(i)
+            s2, nr := removeSmallestNumbers(subStr, r, removeMax)
+            numRemoved += nr
+            removeMax -= nr
+            when ODIN_DEBUG
+            {
+                fmt.printfln("Removed %v %v times", r, nr)
+                fmt.println(subStr)
+                fmt.println(s2)
+            }
+            if removeMax == 0
+            {
+                endStr = s2
+                break
+            }
+            subStr = s2
+        }
+        finalStr := strings.join({highestStr, endStr}, "")
+        when ODIN_DEBUG do fmt.printfln("Final string %v", finalStr)
+        if len(finalStr) != BATTERIES_TO_TURN_ON
+        {
+            fmt.printfln("Final string %v (from %v) not correct length!", finalStr, s)
+            return
+        }
+        finalStrInt, ok := strconv.parse_int(finalStr, 10)
+        assert(ok)
+        cumulativeHighest += finalStrInt
     }
     fmt.printfln("Cumulative highest values: %v", cumulativeHighest)
-    
-    // Process batteries
-   
-    //fmt.printfln("Cumulative 'joltage': %v", ret)
 }
