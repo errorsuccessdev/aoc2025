@@ -1,44 +1,11 @@
-package day2
+package day3
 
-import "core:mem"
 import "core:fmt"
 import os "core:os/os2"
 import "core:strings"
 import "core:strconv"
 
-removeSmallestNumbers :: proc(str: string, removeMe: string,
-                              removeMax: int) -> 
-                             (new: string, numRemoved: int)
-{
-    nr: int
-    s := str
-    for i in 0..<removeMax
-    {
-        sTemp, _ := strings.remove(s, removeMe, 1)
-        if len(sTemp) == len(s) do break
-        nr += 1
-        s = sTemp
-    }
-    return s, nr
-}
-
-intToString :: proc(i: int) -> string
-{
-    ensure(i >= 1 && i <= 9)
-    switch i
-    {
-        case 1: return "1"
-        case 2: return "2"
-        case 3: return "3"
-        case 4: return "4"
-        case 5: return "5"
-        case 6: return "6"
-        case 7: return "7"
-        case 8: return "8"
-        case 9: return "9"
-    }
-    return "unimplemented"
-}
+NUM_BATTERIES_ON :: 12
 
 getHighestNumber :: proc(str: string, start: int = 9) -> 
                         (highest: int, pos: int)
@@ -56,27 +23,6 @@ getHighestNumber :: proc(str: string, start: int = 9) ->
 
 main :: proc()
 {
-    /*
-    when ODIN_DEBUG 
-    {
-		track: mem.Tracking_Allocator
-		mem.tracking_allocator_init(&track, context.allocator)
-		context.allocator = mem.tracking_allocator(&track)
-		defer 
-        {
-			if len(track.allocation_map) > 0 
-            {
-				for _, entry in track.allocation_map 
-                {
-					fmt.eprintfln("Error: %v leaked %v bytes\n", 
-                                  entry.location, entry.size)
-				}
-			}
-			mem.tracking_allocator_destroy(&track)
-		}
-	}
-    */
-
     when ODIN_DEBUG 
     { 
         inputFile := "batteries_example.txt" 
@@ -99,57 +45,62 @@ main :: proc()
     defer delete(str)
 
     // Process input
-    BATTERIES_TO_TURN_ON :: 12
     cumulativeHighest: int
-    for s in str
+    for &s in str
     {
         if len(s) == 0 do continue // skip empty lines
         when ODIN_DEBUG do fmt.printfln("%v =====", s)
-        removeMax := len(s) - BATTERIES_TO_TURN_ON
-        when ODIN_DEBUG do fmt.printfln("Remove max is %v", removeMax)
-        numRemoved, highest, pos: int
-        highestStr, endStr: string
-        for i := 9; i > 0; i -= 1
+        // Chop at highest valid number
+        start := 9
+        highest, pos: int
+        maxPos := len(s) - NUM_BATTERIES_ON - 1
+        //fmt.printfln("maxPos is %v", maxPos)
+        for
         {
-            highest, pos = getHighestNumber(s, i)
-            if pos < removeMax
-            {
-                highestStr = intToString(highest)
-                break
-            }
+            highest, pos = getHighestNumber(s, start)
+            when ODIN_DEBUG do fmt.printfln("highest is %v, pos is %v", highest, pos)
+            when ODIN_DEBUG do fmt.println(s[pos:])
+            if pos <= maxPos do break
+            start -= 1
         }
-        subStr := s[pos+1:]
-        removeMax = len(subStr) - BATTERIES_TO_TURN_ON + 1
-        for i in 1..<10
+        s = s[pos:]
+        when ODIN_DEBUG do fmt.printfln("s is now %v", s)
+
+        num: [12]int
+        num[0] = highest
+        numIndex := 1
+
+        // Remove n "weaker" numbers
+        n := len(s) - NUM_BATTERIES_ON
+        when ODIN_DEBUG do fmt.printfln("Need to remove %v weaker numbers from %v (%v)", n, s, len(s))
+        x := 1
+        remove: for n > 0
         {
-            when ODIN_DEBUG do fmt.printfln("Remove max is %v", removeMax)
-            r := intToString(i)
-            s2, nr := removeSmallestNumbers(subStr, r, removeMax)
-            numRemoved += nr
-            removeMax -= nr
-            when ODIN_DEBUG
+            pos = n + 1
+            start = 9
+            for pos > n
             {
-                fmt.printfln("Removed %v %v times", r, nr)
-                fmt.println(subStr)
-                fmt.println(s2)
+                highest, pos = getHighestNumber(s[x:], start)
+                if highest == -1
+                {
+                    when ODIN_DEBUG do fmt.printfln("Passing %v to ghn produced -1! x is %v", s[x:], x)
+                    s = s[0:len(s)-n]
+                    break remove
+                }
+                start -= 1
+                if start == 0 do break
             }
-            if removeMax == 0
-            {
-                endStr = s2
-                break
-            }
-            subStr = s2
+            when ODIN_DEBUG do fmt.printfln("Highest was %v at %v", highest, pos)
+            s = strings.join({s[0:x], s[pos+x:]}, "")
+            n -= pos
+            x += 1
         }
-        finalStr := strings.join({highestStr, endStr}, "")
-        when ODIN_DEBUG do fmt.printfln("Final string %v", finalStr)
-        if len(finalStr) != BATTERIES_TO_TURN_ON
-        {
-            fmt.printfln("Final string %v (from %v) not correct length!", finalStr, s)
-            return
-        }
-        finalStrInt, ok := strconv.parse_int(finalStr, 10)
+         when ODIN_DEBUG do fmt.printfln("S is finally %v", s)
+        res, ok := strconv.parse_int(s, 10)
         assert(ok)
-        cumulativeHighest += finalStrInt
+        cumulativeHighest += res
+        when ODIN_DEBUG do fmt.println(len(s) == NUM_BATTERIES_ON)
     }
-    fmt.printfln("Cumulative highest values: %v", cumulativeHighest)
+    fmt.printfln("Answer: %v", cumulativeHighest)
+    when ODIN_DEBUG do assert(cumulativeHighest == 3121910778619)
 }
